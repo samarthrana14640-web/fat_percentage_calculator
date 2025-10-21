@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Body Fat Calculator</title>
+<style>
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #0f1b2b;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    color: #fff;
+  }
+  .calculator {
+    background-color: #1c2a4a;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+    width: 320px;
+    text-align: center;
+  }
+  .calculator h2 { margin-bottom: 20px; }
+  .calculator input, .calculator select, .calculator button {
+    width: 100%;
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 8px;
+    border: none;
+    outline: none;
+    font-size: 16px;
+  }
+  .calculator button {
+    background-color: #4a90e2;
+    color: #fff;
+    cursor: pointer;
+  }
+  .result {
+    margin-top: 20px;
+    font-size: 18px;
+    line-height: 1.5;
+  }
+  .category {
+    margin-top: 5px;
+    font-weight: bold;
+    font-size: 17px;
+  }
+  canvas { margin-top: 15px; }
+</style>
+</head>
+<body>
+
+<div class="calculator">
+  <h2>Body Fat Calculator</h2>
+  
+  <select id="gender" onchange="toggleHip()">
+    <option value="male">Male</option>
+    <option value="female">Female</option>
+  </select>
+  
+  <input type="number" id="height" placeholder="Height (cm)">
+  <input type="number" id="neck" placeholder="Neck (cm)">
+  <input type="number" id="waist" placeholder="Waist (cm)">
+  <input type="number" id="hip" placeholder="Hip (cm for females)" style="display:none;">
+  
+  <button onclick="calculateBodyFat()">Calculate</button>
+  
+  <div class="result" id="result">Estimated Body Fat: 0%</div>
+  <div class="category" id="category"></div>
+  <canvas id="fatChart" width="150" height="150"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function toggleHip() {
+  const gender = document.getElementById('gender').value;
+  document.getElementById('hip').style.display = gender === 'female' ? 'block' : 'none';
+}
+
+function getBodyFatCategory(gender, bodyFat) {
+  bodyFat = parseFloat(bodyFat);
+  if(gender === 'male') {
+    if(bodyFat <= 5) return "Essential fat";
+    if(bodyFat <= 13) return "Athletes";
+    if(bodyFat <= 17) return "Fitness";
+    if(bodyFat <= 24) return "Average";
+    return "Obese";
+  } else {
+    if(bodyFat <= 13) return "Essential fat";
+    if(bodyFat <= 20) return "Athletes";
+    if(bodyFat <= 24) return "Fitness";
+    if(bodyFat <= 31) return "Average";
+    return "Obese";
+  }
+}
+
+function calculateBodyFat() {
+  const gender = document.getElementById('gender').value;
+  const height = parseFloat(document.getElementById('height').value);
+  const neck = parseFloat(document.getElementById('neck').value);
+  const waist = parseFloat(document.getElementById('waist').value);
+  const hip = parseFloat(document.getElementById('hip').value) || 0;
+
+  if(!height || !neck || !waist || (gender==='female' && !hip)) {
+    alert('Please fill all required fields.');
+    return;
+  }
+
+  let bodyFat = 0;
+  if(gender === 'male') {
+    bodyFat = 495 / (1.0324 - 0.19077 * Math.log10(waist - neck) + 0.15456 * Math.log10(height)) - 450;
+  } else {
+    bodyFat = 495 / (1.29579 - 0.35004 * Math.log10(waist + hip - neck) + 0.22100 * Math.log10(height)) - 450;
+  }
+
+  bodyFat = bodyFat.toFixed(1);
+  document.getElementById('result').innerText = `Estimated Body Fat: ${bodyFat}%`;
+
+  const category = getBodyFatCategory(gender, bodyFat);
+  document.getElementById('category').innerText = `Category: ${category}`;
+
+  const ctx = document.getElementById('fatChart').getContext('2d');
+  if(window.fatChartInstance) window.fatChartInstance.destroy();
+
+  window.fatChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Body Fat', 'Lean Mass'],
+      datasets: [{
+        data: [bodyFat, 100 - bodyFat],
+        backgroundColor: ['#ff4d6d', '#4a90e2'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      cutout: '70%',
+      responsive: false
+    }
+  });
+}
+</script>
+
+</body>
+</html>
